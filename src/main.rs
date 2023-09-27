@@ -2,22 +2,13 @@ mod meta_file;
 mod dropwatch;
 
 use std::collections::HashMap;
-use std::fs::{File, read_dir, create_dir, copy, write, create_dir_all};
+use std::fs::{File, read_dir, create_dir, copy, write, create_dir_all, read_to_string};
 use std::path::{Path, PathBuf};
 use std::{env, fs};
 use std::io::Read;
 
 use crate::dropwatch::Dropwatch;
 use crate::meta_file::*;
-
-// TODO: Let the user decide this
-const CONVERT_EXTENSIONS: &'static [&'static str] = &[
-    ".prefab",
-    ".mat",
-    ".asset",
-    ".unity",
-    ".controller"
-];
 
 #[derive(Default, Debug)]
 struct AssetConversion {
@@ -33,7 +24,8 @@ impl PartialEq<AssetConversion> for AssetConversion {
 
 fn print_help() {
     println!("Proper usage of prefab_converter.exe is as follows\n");
-    println!("./prefab_converter.exe [src assets path] [dst assets path]");
+    println!("./prefab_converter.exe [src assets path] [dst assets path] ...");
+    println!("\n... = Any number of valid prefab paths (in the source assets path)!");
     println!("\nExample:");
     println!("\n./prefab_converter.exe \"C:/CustomItemsSDK/Assets\" \"C:/MarrowSDK/Assets\"");
 }
@@ -62,6 +54,48 @@ fn main() {
     // Before we export, create the temp folder
     let _ = create_dir("ConversionOutput");
     let export_path = "./ConversionOutput".to_string();
+
+    let convert_extensions = {
+        let mut vec = Vec::<String>::new();
+
+        let default_extensions = vec!(
+            ".prefab",
+            ".mat",
+            ".asset",
+            ".unity",
+            ".controller"
+        );
+
+        for ext in default_extensions {
+            vec.push(String::from(ext));
+        }
+
+        // Then load the disk version (if found)
+        let path = Path::new("extensions.txt");
+        if path.exists() {
+            let file = read_to_string(path).unwrap();
+
+            // For each line, add it to the extension list
+            for line in file.lines() {
+                let str = String::from(line);
+
+                if !vec.contains(&str) {
+                    vec.push(str)
+                }
+            }
+        }
+
+        vec
+    };
+
+    println!("-- [Run Info] --");
+
+    println!("Target Extensions:");
+    for ext in &convert_extensions {
+        println!("\t{}", ext);
+    }
+
+    println!("--============--");
 
     //
     // Collection stage
@@ -122,7 +156,6 @@ fn main() {
 
     let mut convert_queue = Vec::<AssetConversion>::new();
 
-    /*
     for a in 3 .. args.len() {
         let prefab_dir = PathBuf::from(&args[a]);
         let mut relative_export_path = PathBuf::from(&export_path);
@@ -135,7 +168,6 @@ fn main() {
 
         convert_queue.push(convert);
     }
-     */
 
     while let Some(convert) = convert_queue.pop() {
         let prefab_path = Path::new(&convert.path);
@@ -189,8 +221,8 @@ fn main() {
 
                     // If this is a prefab, push it to the list of queued conversions
                     // If it hasn't been pushed already!
-                    for ext in CONVERT_EXTENSIONS {
-                        if missing_meta.base_name.ends_with(ext){
+                    for ext in &convert_extensions {
+                        if missing_meta.base_name.ends_with(ext.as_str()){
                             let mut convert = AssetConversion::default();
                             convert.path = asset_src_path.clone();
 
