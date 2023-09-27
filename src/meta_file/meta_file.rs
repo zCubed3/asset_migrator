@@ -1,8 +1,8 @@
-use std::io::{BufReader, BufRead};
-use std::fs::{File};
-use std::path::{PathBuf, Path};
-use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
+use std::fs::File;
+use std::hash::{Hash, Hasher};
+use std::io::{BufRead, BufReader};
+use std::path::{Path, PathBuf};
 
 /// Unity meta file (GUID only)
 #[derive(Debug, Default, Clone)]
@@ -20,7 +20,7 @@ pub struct MetaFile {
     pub guid_hash: u64,
 
     /// Hash of the base name
-    pub base_hash: u64
+    pub base_hash: u64,
 }
 
 impl MetaFile {
@@ -31,7 +31,12 @@ impl MetaFile {
 
             let mut meta_file = Self::default();
 
-            meta_file.base_name = path.file_stem().unwrap().to_os_string().into_string().unwrap();
+            meta_file.base_name = path
+                .file_stem()
+                .unwrap()
+                .to_os_string()
+                .into_string()
+                .unwrap();
             meta_file.directory = path.parent().unwrap().display().to_string();
 
             {
@@ -56,7 +61,7 @@ impl MetaFile {
             }
 
             if !meta_file.guid.is_empty() {
-                return Some(meta_file)
+                return Some(meta_file);
             }
         }
 

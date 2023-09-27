@@ -1,5 +1,11 @@
 # Unity Meta + Asset Migrator
 
+### Special Thanks
+
+* [notnotnotswipez](https://github.com/notnotnotswipez) - Thank you for writing the original!
+* Fersy - Thank you for testing!
+* DayTrip - Thank you for testing!
+
 ### DISCLAIMER!
 This is a rewrite + extension of https://github.com/notnotnotswipez/PrefabConverter to Rust!
 All credit goes to notnotnotswipez for his original implementation.

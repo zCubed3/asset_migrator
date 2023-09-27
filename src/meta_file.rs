@@ -1,10 +1,10 @@
-pub mod meta_file;
 pub mod collector;
+pub mod meta_file;
 
-pub use meta_file::*;
 pub use collector::*;
+pub use meta_file::*;
 
-use std::fs::{read_dir};
+use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 
 pub fn collect_recurse<P: AsRef<Path>>(path: P, dirs: &mut Vec<PathBuf>) {
@@ -58,5 +58,5 @@ pub fn collect_meta_files(path: &String) -> Vec<MetaFile> {
         }
 
         metas
-    }
+    };
 }

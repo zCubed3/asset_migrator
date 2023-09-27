@@ -1,0 +1,11 @@
+#
+# This is an example extensions.txt file
+#
+# As you can see, comments are lines that start with #
+#
+
+# EXTENSIONS MUST BE LOWERCASE AND START WITH A PERIOD!
+# EXTENSIONS MUST BE LOWERCASE AND START WITH A PERIOD!
+# EXTENSIONS MUST BE LOWERCASE AND START WITH A PERIOD!
+
+.wlt

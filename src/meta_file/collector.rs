@@ -1,7 +1,7 @@
-use std::fs::{read_dir};
-use std::path::{PathBuf};
-use std::sync::{Arc, Mutex, Condvar};
-use std::thread::{JoinHandle, spawn};
+use std::fs::read_dir;
+use std::path::PathBuf;
+use std::sync::{Arc, Condvar, Mutex};
+use std::thread::{spawn, JoinHandle};
 
 use super::meta_file::MetaFile;
 
@@ -10,7 +10,7 @@ pub struct MetaFileCollector {
     threads: Vec<JoinHandle<()>>,
     work_paths: Arc<Mutex<Vec<PathBuf>>>,
     meta_files: Arc<Mutex<Vec<MetaFile>>>,
-    condvar: Arc<(Mutex<bool>, Condvar)>
+    condvar: Arc<(Mutex<bool>, Condvar)>,
 }
 
 impl MetaFileCollector {
@@ -28,7 +28,7 @@ impl MetaFileCollector {
             println!("DEBUG: COLLECTING WITH {} THREADS", thread_count);
         }
 
-        for _ in 0usize .. thread_count {
+        for _ in 0usize..thread_count {
             let work_paths = Arc::clone(&work_paths);
             let meta_files = Arc::clone(&meta_files);
             let condvar = Arc::clone(&condvar);
@@ -42,8 +42,8 @@ impl MetaFileCollector {
             threads,
             work_paths,
             meta_files,
-            condvar
-        }
+            condvar,
+        };
     }
 
     pub fn wait(&self) {
@@ -71,10 +71,17 @@ impl MetaFileCollector {
             }
         }
 
-        return Arc::try_unwrap(self.meta_files).unwrap().into_inner().unwrap();
+        return Arc::try_unwrap(self.meta_files)
+            .unwrap()
+            .into_inner()
+            .unwrap();
     }
 
-    fn collector_loop(condvar: Arc<(Mutex<bool>, Condvar)>, work_paths: Arc<Mutex<Vec<PathBuf>>>, meta_files: Arc<Mutex<Vec<MetaFile>>>) {
+    fn collector_loop(
+        condvar: Arc<(Mutex<bool>, Condvar)>,
+        work_paths: Arc<Mutex<Vec<PathBuf>>>,
+        meta_files: Arc<Mutex<Vec<MetaFile>>>,
+    ) {
         loop {
             let mut path: Option<PathBuf> = None;
             let mut notify: bool = false;
