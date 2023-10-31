@@ -159,11 +159,27 @@ fn main() {
     for a in 3..args.len() {
         let prefab_dir = PathBuf::from(&args[a]);
         let mut relative_export_path = PathBuf::from(&export_path);
-        relative_export_path.push(prefab_dir.strip_prefix(&src_assets).unwrap());
+
+        let sanitized = {
+            if let Ok(prefab) = prefab_dir.strip_prefix(&src_assets) {
+                prefab
+            } else {
+                prefab_dir.as_path()
+            }
+        };
+
+        relative_export_path.push(sanitized);
         relative_export_path.pop();
 
+        let mut import = PathBuf::from(&args[a]);
+
+        if !import.starts_with(&src_assets) {
+            import = PathBuf::from(&src_assets);
+            import.push(&args[a]);
+        }
+
         let mut convert = AssetConversion::default();
-        convert.path = args[a].clone();
+        convert.path = import.display().to_string();
         convert.output_path = relative_export_path.display().to_string();
 
         convert_queue.push(convert);
@@ -171,6 +187,11 @@ fn main() {
 
     while let Some(convert) = convert_queue.pop() {
         let prefab_path = Path::new(&convert.path);
+
+        if prefab_path.is_dir() {
+            continue;
+        }
+
         let mut prefab_file = File::open(prefab_path).unwrap();
 
         // Copy over the meta file first (if it doesn't exist)
