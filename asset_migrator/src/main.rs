@@ -30,6 +30,7 @@
 // ===================================================================================
 
 mod meta_file;
+mod dropwatch;
 
 use rayon::prelude::*;
 use std::collections::HashMap;
@@ -61,6 +62,8 @@ fn print_help() {
 }
 
 fn main() {
+    //let dropwatch = dropwatch::Dropwatch::new_begin("PROGRAM");
+
     // Handle arguments
     let args: Vec<String> = env::args().collect();
 
