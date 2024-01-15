@@ -1,7 +1,7 @@
 // ===================================================================================
 //  BSD 3-Clause License
 //
-//  Copyright (c) 2023-2024, Liam R. (zCubed3)
+//  Copyright (c) 2023-2024, Liam Reese (zCubed3)
 //
 //  Redistribution and use in source and binary forms, with or without
 //  modification, are permitted provided that the following conditions are met:
@@ -29,15 +29,14 @@
 //  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // ===================================================================================
 
-mod dropwatch;
 mod meta_file;
 
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::env;
 use std::fs::*;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use rayon::prelude::*;
 
 use crate::meta_file::*;
 
@@ -65,8 +64,8 @@ fn main() {
     // Handle arguments
     let args: Vec<String> = env::args().collect();
 
-    let mut src_assets = String::new();
-    let mut dst_assets = String::new();
+    let src_assets;
+    let dst_assets;
 
     if args.len() > 1 {
         // Minimum is 4
@@ -164,9 +163,7 @@ fn main() {
                 // Check if a remap is necessary
                 let remap_opt = dst_metas
                     .par_iter()
-                    .find_first(|dst_meta| -> bool {
-                        src_meta.base_hash == dst_meta.base_hash
-                    });
+                    .find_first(|dst_meta| -> bool { src_meta.base_hash == dst_meta.base_hash });
 
                 if let Some(remap) = remap_opt {
                     remapped_metas.insert(src_meta.guid.clone(), remap.clone());

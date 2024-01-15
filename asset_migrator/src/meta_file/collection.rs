@@ -29,8 +29,65 @@
 //  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // ===================================================================================
 
-mod collection;
-mod meta_struct;
+use crate::meta_file::MetaFile;
 
-pub use meta_struct::*;
-pub use collection::*;
+use std::fs::{DirEntry, read_dir};
+use std::path::{Path, PathBuf};
+use rayon::prelude::*;
+
+// ======================
+//  Meta File Collection
+// ======================
+fn collect_recurse<P: AsRef<Path>>(path: P, dirs: &mut Vec<PathBuf>) {
+    // https://stackoverflow.com/questions/77608489/rust-rayon-collect-options-into-vector
+    let entries: Vec<DirEntry> = read_dir(path)
+        .expect("Failed to read directory!")
+        .filter_map(|e| e.ok())
+        .collect();
+
+    let mut found_dirs = entries
+        .into_par_iter()
+        .map(|dir| -> Vec<PathBuf> {
+            if !dir.file_type().unwrap().is_dir() {
+                return vec![];
+            }
+
+            let mut paths = Vec::<PathBuf>::new();
+            paths.push(dir.path());
+
+            collect_recurse(dir.path(), &mut paths);
+
+            paths
+        })
+        .flatten_iter()
+        .collect();
+
+    dirs.append(&mut found_dirs);
+}
+
+pub fn collect_meta_files(path: &String) -> Vec<MetaFile> {
+    let mut dirs = vec![];
+    collect_recurse(path, &mut dirs);
+
+    dirs.into_par_iter()
+        .map(|dir| -> Vec<MetaFile> {
+            let read = read_dir(dir).expect("Failed to read directory!");
+
+            read.into_iter()
+                .filter_map(|e| e.ok())
+                .filter_map(|entry| -> Option<MetaFile> {
+                    let path = entry.path();
+
+                    if let Some(ext) = path.extension() {
+                        if ext == "meta" {
+                            return MetaFile::read_from_path(&path);
+                        }
+                    }
+
+                    None
+                })
+                .collect()
+        })
+        .flatten()
+        .collect()
+}
