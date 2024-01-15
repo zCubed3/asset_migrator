@@ -1,13 +1,10 @@
-[package]
-name = "asset_migrator"
-version = "1.0.0"
-edition = "2021"
-
-license = "BSD-3"
-
-authors = [
-    "Liam R. (zCubed3) <zcubedtres@gmail.com>",
-    "notnotnotswipez"
+[workspace]
+members = [
+    "asset_migrator"
 ]
 
-[dependencies]
+resolver = "2"
+
+[profile.release]
+lto = true
+strip = "symbols"

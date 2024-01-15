@@ -37,6 +37,7 @@ use std::env;
 use std::fs::*;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use rayon::prelude::*;
 
 use crate::meta_file::*;
 
@@ -127,9 +128,9 @@ fn main() {
 
     println!("--============--");
 
-    //
-    // Collection stage
-    //
+    // ==================
+    //  Collection stage
+    // ==================
 
     // We read two projects worth of hash files
     // Any overlap between the two is eliminated (we assume the asset already exists properly)
@@ -155,19 +156,21 @@ fn main() {
         for src_meta in &src_metas {
             //println!("{:?}", src_meta);
 
-            let mut same_found = false;
+            let mut same_found = dst_metas
+                .par_iter()
+                .any(|dst_meta| dst_meta.guid_hash == src_meta.guid_hash);
 
-            for dst_meta in &dst_metas {
-                if src_meta.guid_hash == dst_meta.guid_hash {
-                    same_found = true;
-                    break;
-                }
+            if !same_found {
+                // Check if a remap is necessary
+                let remap_opt = dst_metas
+                    .par_iter()
+                    .find_first(|dst_meta| -> bool {
+                        src_meta.base_hash == dst_meta.base_hash
+                    });
 
-                // Is this the same asset but with a different GUID?
-                if src_meta.base_hash == dst_meta.base_hash {
+                if let Some(remap) = remap_opt {
+                    remapped_metas.insert(src_meta.guid.clone(), remap.clone());
                     same_found = true;
-                    remapped_metas.insert(src_meta.guid.clone(), dst_meta.clone());
-                    break;
                 }
             }
 
@@ -184,36 +187,45 @@ fn main() {
     println!("Please be patient, conversion may take a while!");
     println!("--====================--");
 
-    let mut convert_queue = Vec::<AssetConversion>::new();
+    let mut convert_queue: Vec<AssetConversion> = args
+        .into_iter()
+        .skip(3)
+        .map(|str| -> AssetConversion {
+            let prefab_dir = PathBuf::from(&str);
+            let mut relative_export_path = PathBuf::from(&export_path);
 
-    for a in 3..args.len() {
-        let prefab_dir = PathBuf::from(&args[a]);
-        let mut relative_export_path = PathBuf::from(&export_path);
+            let sanitized = {
+                if let Ok(prefab) = prefab_dir.strip_prefix(&src_assets) {
+                    prefab
+                } else {
+                    prefab_dir.as_path()
+                }
+            };
 
-        let sanitized = {
-            if let Ok(prefab) = prefab_dir.strip_prefix(&src_assets) {
-                prefab
-            } else {
-                prefab_dir.as_path()
+            relative_export_path.push(sanitized);
+            relative_export_path.pop();
+
+            let mut import = PathBuf::from(&str);
+
+            if !import.starts_with(&src_assets) {
+                import = PathBuf::from(&src_assets);
+                import.push(&str);
             }
-        };
 
-        relative_export_path.push(sanitized);
-        relative_export_path.pop();
+            let mut convert = AssetConversion::default();
+            convert.path = import.display().to_string();
+            convert.output_path = relative_export_path.display().to_string();
 
-        let mut import = PathBuf::from(&args[a]);
+            convert
+        })
+        .collect();
 
-        if !import.starts_with(&src_assets) {
-            import = PathBuf::from(&src_assets);
-            import.push(&args[a]);
-        }
-
-        let mut convert = AssetConversion::default();
-        convert.path = import.display().to_string();
-        convert.output_path = relative_export_path.display().to_string();
-
-        convert_queue.push(convert);
-    }
+    //
+    // Dependency stage
+    //
+    println!("-- [Dependency Stage] --");
+    println!("Please be patient, copying dependencies may take a while!");
+    println!("--====================--");
 
     while let Some(convert) = convert_queue.pop() {
         let prefab_path = Path::new(&convert.path);

@@ -29,65 +29,66 @@
 //  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // ===================================================================================
 
-pub mod collector;
 pub mod meta_file;
 
-pub use collector::*;
 pub use meta_file::*;
 
-use std::fs::read_dir;
+use std::fs::{DirEntry, read_dir, ReadDir};
 use std::path::{Path, PathBuf};
+use rayon::prelude::*;
 
-pub fn collect_recurse<P: AsRef<Path>>(path: P, dirs: &mut Vec<PathBuf>) {
-    for entry_result in read_dir(path).expect("Failed to read given path!") {
-        // If we can't read a meta file we probably shouldn't be in here
-        let entry = entry_result.expect("Failed to read file in given path!");
+fn collect_recurse<P: AsRef<Path>>(path: P, dirs: &mut Vec<PathBuf>) {
+    // https://stackoverflow.com/questions/77608489/rust-rayon-collect-options-into-vector
+    let entries: Vec<DirEntry> = read_dir(path)
+        .expect("Failed to read directory!")
+        .filter_map(|e| e.ok())
+        .collect();
 
-        if let Ok(file_type) = entry.file_type() {
-            if file_type.is_dir() {
-                dirs.push(entry.path());
-                collect_recurse(entry.path(), dirs);
+    let mut found_dirs = entries
+        .into_par_iter()
+        .map(|dir| -> Vec<PathBuf> {
+            if !dir.file_type().unwrap().is_dir() {
+                return vec!()
             }
-        }
-    }
+
+            let mut paths = Vec::<PathBuf>::new();
+            paths.push(dir.path());
+
+            collect_recurse(dir.path(), &mut paths);
+
+            paths
+        })
+        .flatten_iter()
+        .collect();
+
+    dirs.append(&mut found_dirs);
 }
 
 pub fn collect_meta_files(path: &String) -> Vec<MetaFile> {
-    // First fetch all the directories within a project
-    let mut dirs = Vec::<PathBuf>::new();
+    let mut dirs = vec!();
     collect_recurse(path, &mut dirs);
 
-    // Then collect them
-    //println!("Collecting meta files...");
-    let collect_multi = true;
+    dirs
+        .into_par_iter()
+        .map(|dir| -> Vec<MetaFile> {
+            let read = read_dir(dir).expect("Failed to read directory!");
 
-    return if collect_multi {
-        //let drop = dropwatch::Dropwatch::new_begin("META_COLLECT");
+            read
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter_map(|entry| -> Option<MetaFile> {
+                    let path = entry.path();
 
-        let collector = MetaFileCollector::new(dirs);
-        collector.wait();
-
-        collector.consume()
-    } else {
-        //let drop = dropwatch::Dropwatch::new_begin("META_COLLECT");
-
-        let mut metas = Vec::<MetaFile>::new();
-        for path in dirs {
-            for entry_result in read_dir(path).expect("Failed to read given path!") {
-                // If we can't read a meta file we probably shouldn't be in here
-                let entry = entry_result.expect("Failed to read file in given path!");
-
-                if let Some(extension) = entry.path().extension() {
-                    if extension == "meta" {
-                        let meta = MetaFile::read_from_path(&entry.path()).unwrap();
-
-                        //println!("{:?}", meta);
-                        metas.push(meta);
+                    if let Some(ext) = path.extension() {
+                        if ext == "meta" {
+                            return MetaFile::read_from_path(&path)
+                        }
                     }
-                }
-            }
-        }
 
-        metas
-    };
+                    None
+                })
+                .collect()
+        })
+        .flatten()
+        .collect()
 }
