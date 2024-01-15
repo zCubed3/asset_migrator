@@ -31,9 +31,9 @@
 
 use crate::meta_file::MetaFile;
 
-use std::fs::{DirEntry, read_dir};
-use std::path::{Path, PathBuf};
 use rayon::prelude::*;
+use std::fs::{read_dir, DirEntry};
+use std::path::{Path, PathBuf};
 
 // ======================
 //  Meta File Collection

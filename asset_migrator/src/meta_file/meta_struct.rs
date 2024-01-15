@@ -80,18 +80,16 @@ impl MetaFile {
                 meta_file.base_hash = hasher.finish();
             }
 
-            for line in reader.lines() {
-                if let Ok(contents) = line {
-                    if contents.contains("guid: ") {
-                        meta_file.guid = contents.replace("guid:", "").trim().to_string();
+            for line in reader.lines().flatten() {
+                if line.contains("guid: ") {
+                    meta_file.guid = line.replace("guid:", "").trim().to_string();
 
-                        // Hashing the GUID makes overlap comparison BLAZING FAST :P
-                        let mut hasher = DefaultHasher::new();
-                        meta_file.guid.hash(&mut hasher);
-                        meta_file.guid_hash = hasher.finish();
+                    // Hashing the GUID makes overlap comparison BLAZING FAST :P
+                    let mut hasher = DefaultHasher::new();
+                    meta_file.guid.hash(&mut hasher);
+                    meta_file.guid_hash = hasher.finish();
 
-                        break;
-                    }
+                    break;
                 }
             }
 

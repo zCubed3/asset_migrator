@@ -32,5 +32,5 @@
 mod collection;
 mod meta_struct;
 
-pub use meta_struct::*;
 pub use collection::*;
+pub use meta_struct::*;
