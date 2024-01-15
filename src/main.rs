@@ -33,12 +33,11 @@ mod dropwatch;
 mod meta_file;
 
 use std::collections::HashMap;
+use std::env;
 use std::fs::*;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::{env, fs};
 
-use crate::dropwatch::Dropwatch;
 use crate::meta_file::*;
 
 #[derive(Default, Debug)]
@@ -230,7 +229,7 @@ fn main() {
         meta_path.push_str(".meta");
 
         let mut contents = String::new();
-        let size = prefab_file.read_to_string(&mut contents);
+        let _size = prefab_file.read_to_string(&mut contents);
 
         let mut converted_contents = contents.clone();
 
