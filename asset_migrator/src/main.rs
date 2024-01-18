@@ -220,13 +220,6 @@ fn main() {
         })
         .collect();
 
-    //
-    // Dependency stage
-    //
-    println!("-- [Dependency Stage] --");
-    println!("Please be patient, copying dependencies may take a while!");
-    println!("--====================--");
-
     while let Some(convert) = convert_queue.pop() {
         let prefab_path = Path::new(&convert.path);
 
@@ -290,7 +283,7 @@ fn main() {
                             convert.path = asset_src_path.clone();
 
                             if !convert_queue.contains(&convert) {
-                                println!("Converting referenced asset {:?}", asset_src_path);
+                                println!("[Conversion]: Queuing referenced asset {:?}", asset_src_path);
 
                                 convert.output_path = relative_export_path.display().to_string();
                                 convert_queue.push(convert);
