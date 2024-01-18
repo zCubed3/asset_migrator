@@ -29,6 +29,8 @@
 //  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // ===================================================================================
 
+#![allow(dead_code)]
+
 use std::time;
 
 /// Measures time from the creation of this watch to when it exists scope
@@ -52,7 +54,7 @@ impl Dropwatch {
     pub fn new_begin(id: &str) -> Self {
         let mut s = Self::new(id);
         s.begin();
-        return s;
+        s
     }
 }
 

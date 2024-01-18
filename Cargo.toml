@@ -2,6 +2,7 @@
 name = "asset_migrator"
 version = "1.0.0"
 edition = "2021"
+description = "A tool to migrate Unity assets from one project to another; Assuming exporting a package is not possible!"
 
 license = "BSD-3"
 
@@ -9,5 +10,12 @@ authors = [
     "Liam R. (zCubed3) <zcubedtres@gmail.com>",
     "notnotnotswipez"
 ]
+
+[profile.release]
+lto = true
+
+[profile.rel-with-debug]
+inherits = "release"
+debug = true
 
 [dependencies]

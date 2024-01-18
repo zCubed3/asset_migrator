@@ -37,6 +37,8 @@ use std::env;
 use std::fs::*;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::thread::sleep;
+use std::time::Duration;
 
 use crate::meta_file::*;
 
@@ -48,7 +50,7 @@ struct AssetConversion {
 
 impl PartialEq<AssetConversion> for AssetConversion {
     fn eq(&self, other: &AssetConversion) -> bool {
-        return self.path == other.path;
+        self.path == other.path
     }
 }
 
@@ -61,25 +63,23 @@ fn print_help() {
 }
 
 fn main() {
+    sleep(Duration::from_millis(10000u64));
+
     // Handle arguments
     let args: Vec<String> = env::args().collect();
 
-    let mut src_assets = String::new();
-    let mut dst_assets = String::new();
-
-    if args.len() > 1 {
+    let (src_assets, dst_assets) = if args.len() > 1 {
         // Minimum is 4
         if args.len() < 3 {
             print_help();
             return;
         }
 
-        src_assets = args[1].clone();
-        dst_assets = args[2].clone();
+        (args[1].clone(), args[2].clone())
     } else {
         print_help();
         return;
-    }
+    };
 
     // Before we export, create the temp folder
     let _ = create_dir("ConversionOutput");
@@ -186,8 +186,8 @@ fn main() {
 
     let mut convert_queue = Vec::<AssetConversion>::new();
 
-    for a in 3..args.len() {
-        let prefab_dir = PathBuf::from(&args[a]);
+    for prefab in args.iter().skip(3) {
+        let prefab_dir = PathBuf::from(prefab);
         let mut relative_export_path = PathBuf::from(&export_path);
 
         let sanitized = {
@@ -201,18 +201,17 @@ fn main() {
         relative_export_path.push(sanitized);
         relative_export_path.pop();
 
-        let mut import = PathBuf::from(&args[a]);
+        let mut import = PathBuf::from(prefab);
 
         if !import.starts_with(&src_assets) {
             import = PathBuf::from(&src_assets);
-            import.push(&args[a]);
+            import.push(prefab);
         }
 
-        let mut convert = AssetConversion::default();
-        convert.path = import.display().to_string();
-        convert.output_path = relative_export_path.display().to_string();
-
-        convert_queue.push(convert);
+        convert_queue.push(AssetConversion {
+            path: import.display().to_string(),
+            output_path: relative_export_path.display().to_string(),
+        });
     }
 
     while let Some(convert) = convert_queue.pop() {
@@ -273,16 +272,18 @@ fn main() {
                     // If this is a prefab, push it to the list of queued conversions
                     // If it hasn't been pushed already!
                     for ext in &convert_extensions {
-                        if missing_meta.base_name.ends_with(ext.as_str()) {
-                            let mut convert = AssetConversion::default();
-                            convert.path = asset_src_path.clone();
+                        if missing_meta.base_name.ends_with(ext.as_str())
+                            && !convert_queue.iter().any(|e| e.path == asset_src_path)
+                        {
+                            println!(
+                                "[Conversion]: Enqueuing referenced asset {:?}",
+                                asset_src_path
+                            );
 
-                            if !convert_queue.contains(&convert) {
-                                println!("Converting referenced asset {:?}", asset_src_path);
-
-                                convert.output_path = relative_export_path.display().to_string();
-                                convert_queue.push(convert);
-                            }
+                            convert_queue.push(AssetConversion {
+                                path: asset_src_path.clone(),
+                                output_path: relative_export_path.display().to_string(),
+                            });
 
                             break;
                         }
@@ -292,8 +293,6 @@ fn main() {
                     // This prevents prefab duplication / overwriting
                     need_delete = true;
                     break;
-
-                    //println!("MATCH: {} = {:?}", guid, missing_meta)
                 }
 
                 delete += 1;

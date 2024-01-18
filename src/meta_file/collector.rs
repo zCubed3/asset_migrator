@@ -39,7 +39,6 @@ use super::meta_file::MetaFile;
 /// Spawns threads and collects meta files from an internal worklist
 pub struct MetaFileCollector {
     threads: Vec<JoinHandle<()>>,
-    work_paths: Arc<Mutex<Vec<PathBuf>>>,
     meta_files: Arc<Mutex<Vec<MetaFile>>>,
     condvar: Arc<(Mutex<bool>, Condvar)>,
 }
@@ -69,19 +68,18 @@ impl MetaFileCollector {
             }));
         }
 
-        return Self {
+        Self {
             threads,
-            work_paths,
             meta_files,
             condvar,
-        };
+        }
     }
 
     pub fn wait(&self) {
         {
             let (lock, cvar) = &*self.condvar;
-            let mut notified = lock.lock().unwrap();
 
+            let mut notified = lock.lock().unwrap();
             notified = cvar.wait(notified).unwrap();
         }
     }
@@ -114,8 +112,8 @@ impl MetaFileCollector {
         meta_files: Arc<Mutex<Vec<MetaFile>>>,
     ) {
         loop {
-            let mut path: Option<PathBuf> = None;
-            let mut notify: bool = false;
+            let path: Option<PathBuf>;
+            let notify: bool;
 
             {
                 let mut lock = work_paths.lock().unwrap();
